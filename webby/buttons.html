@@ -1,21 +1,35 @@
 <html>
 <head>
   <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+
+  <style>
+    button {
+      font-size: 400%;
+      margin: 0% 40% 5% 40%;
+      width:  400px;
+      height: 400px;
+    }
+  </style>
 </head>
 
 <body>
   <button>red</button>
   <button>green</button>
   <button>blue</button>
+  <button>left</button>
+  <button>right</button>
+  <button>forward</button>
+  <button>back</button>
 
   <button>wiggle</button>
+
 </body>
 
 <script>
 $(function() {
   $("button").click( function(evt){
       var cmd = $(evt.target).text();
-      baseUrl = "http://www.localhost.com:3000/api/robots/sphero/commands/"
+      baseUrl = "/api/robots/sphero/commands/"
 
     $.get(baseUrl + cmd);
       });

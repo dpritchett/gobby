@@ -1,6 +1,10 @@
 package main
 
 import (
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"time"
 
 	"github.com/hybridgroup/gobot"
@@ -10,9 +14,6 @@ import (
 
 func main() {
 	gbot := gobot.NewGobot()
-
-	// Starts the API server on default port 3000
-	api.NewAPI(gbot).Start()
 
 	adaptor := sphero.NewSpheroAdaptor("sphero", "/dev/rfcomm0")
 	driver := sphero.NewSpheroDriver(adaptor, "sphero")
@@ -38,6 +39,26 @@ func main() {
 	hello.AddCommand("red", func(params map[string]interface{}) interface{} {
 		driver.SetRGB(255, 0, 0)
 		return "turning red"
+	})
+
+	hello.AddCommand("left", func(params map[string]interface{}) interface{} {
+		driver.Roll(75, uint16(270))
+		return "moving left"
+	})
+
+	hello.AddCommand("right", func(params map[string]interface{}) interface{} {
+		driver.Roll(75, uint16(90))
+		return "moving right"
+	})
+
+	hello.AddCommand("forward", func(params map[string]interface{}) interface{} {
+		driver.Roll(75, uint16(0))
+		return "moving forward"
+	})
+
+	hello.AddCommand("back", func(params map[string]interface{}) interface{} {
+		driver.Roll(75, uint16(0))
+		return "moving back"
 	})
 
 	rgb := func() uint8 {
@@ -66,6 +87,23 @@ func main() {
 
 		return "wiggle wiggle wiggle wiggle wiggle wiggle wiggle"
 	})
+
+	// Starts the API server on default port 3000
+	apiServer := api.NewAPI(gbot)
+	apiServer.Start()
+
+	demoFileService := func(w http.ResponseWriter, r *http.Request) {
+		fileName := "./buttons.html"
+		pageHTML, err := ioutil.ReadFile(fileName)
+
+		if err != nil {
+			log.Fatalf("error reading %v", fileName)
+		}
+
+		io.WriteString(w, string(pageHTML))
+	}
+
+	apiServer.Get("/demo/", demoFileService)
 
 	gbot.Start()
 }
