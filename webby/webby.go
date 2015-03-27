@@ -1,7 +1,6 @@
-package main
+package webby
 
 import (
-	"flag"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,19 +12,18 @@ import (
 	"github.com/hybridgroup/gobot/platforms/sphero"
 )
 
-func main() {
-	// pass a different bluetooth FD as needed: webby /dev/rfcomm1
-	deviceFd := "/dev/rfcomm0"
+type Webby struct {
+	Gobot     *gobot.Gobot
+	Sphero    *gobot.Robot
+	ApiServer *api.API
+}
 
-	flag.Parse()
-	if flag.Arg(0) != "" {
-		log.Println(flag.Arg(0))
-		deviceFd = flag.Arg(0)
-	}
+func NewWebby(spheroFd string) *Webby {
+	ss := &Webby{}
 
-	gbot := gobot.NewGobot()
+	ss.Gobot = gobot.NewGobot()
 
-	adaptor := sphero.NewSpheroAdaptor("sphero", deviceFd)
+	adaptor := sphero.NewSpheroAdaptor("sphero", spheroFd)
 	driver := sphero.NewSpheroDriver(adaptor, "sphero")
 
 	spheroid := gobot.NewRobot("sphero",
@@ -33,40 +31,40 @@ func main() {
 		[]gobot.Device{driver},
 	)
 
-	hello := gbot.AddRobot(spheroid)
+	ss.Sphero = ss.Gobot.AddRobot(spheroid)
 
 	// Accessible via http://localhost:3000/robots/sphero/commands/turn_blue
-	hello.AddCommand("blue", func(params map[string]interface{}) interface{} {
+	ss.Sphero.AddCommand("blue", func(params map[string]interface{}) interface{} {
 		driver.SetRGB(0, 0, 255)
 		return "turning blue"
 	})
 
-	hello.AddCommand("green", func(params map[string]interface{}) interface{} {
+	ss.Sphero.AddCommand("green", func(params map[string]interface{}) interface{} {
 		driver.SetRGB(0, 255, 0)
 		return "turning green"
 	})
 
-	hello.AddCommand("red", func(params map[string]interface{}) interface{} {
+	ss.Sphero.AddCommand("red", func(params map[string]interface{}) interface{} {
 		driver.SetRGB(255, 0, 0)
 		return "turning red"
 	})
 
-	hello.AddCommand("left", func(params map[string]interface{}) interface{} {
+	ss.Sphero.AddCommand("left", func(params map[string]interface{}) interface{} {
 		driver.Roll(75, uint16(270))
 		return "moving left"
 	})
 
-	hello.AddCommand("right", func(params map[string]interface{}) interface{} {
+	ss.Sphero.AddCommand("right", func(params map[string]interface{}) interface{} {
 		driver.Roll(75, uint16(90))
 		return "moving right"
 	})
 
-	hello.AddCommand("forward", func(params map[string]interface{}) interface{} {
+	ss.Sphero.AddCommand("forward", func(params map[string]interface{}) interface{} {
 		driver.Roll(75, uint16(0))
 		return "moving forward"
 	})
 
-	hello.AddCommand("back", func(params map[string]interface{}) interface{} {
+	ss.Sphero.AddCommand("back", func(params map[string]interface{}) interface{} {
 		driver.Roll(75, uint16(180))
 		return "moving back"
 	})
@@ -84,31 +82,37 @@ func main() {
 		driver.Roll(75, uint16(gobot.Rand(360)))
 	}
 
-	hello.AddCommand("wiggle", func(params map[string]interface{}) interface{} {
-		wiggle()
+	ss.Sphero.AddCommand("wiggle", func(params map[string]interface{}) interface{} {
+		times := []time.Duration{0, 2, 4}
 
-		gobot.After(2*time.Second, wiggle)
-		gobot.After(4*time.Second, wiggle)
+		for _, t := range times {
+			gobot.After(t*time.Second, wiggle)
+		}
 
 		return "wiggle wiggle wiggle wiggle wiggle wiggle wiggle"
 	})
 
 	// Starts the API server on default port 3000
-	apiServer := api.NewAPI(gbot)
-	apiServer.Start()
+	ss.ApiServer = api.NewAPI(ss.Gobot)
+	ss.ApiServer.Start()
 
+	return ss
+}
+
+func (ss *Webby) HostFileAtRoute(filePath, route string) {
 	demoFileService := func(w http.ResponseWriter, r *http.Request) {
-		fileName := "./buttons.html"
-		pageHTML, err := ioutil.ReadFile(fileName)
+		pageHTML, err := ioutil.ReadFile(filePath)
 
 		if err != nil {
-			log.Fatalf("error reading %v", fileName)
+			log.Fatalf("error reading %v", filePath)
 		}
 
 		io.WriteString(w, string(pageHTML))
 	}
 
-	apiServer.Get("/demo/", demoFileService)
+	ss.ApiServer.Get(route, demoFileService)
+}
 
-	gbot.Start()
+func (ss *Webby) Start() (errs []error) {
+	return ss.Gobot.Start()
 }
