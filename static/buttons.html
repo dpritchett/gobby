@@ -1,39 +1,60 @@
 <html>
 <head>
-  <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
 
-  <style>
-    button {
-      font-size: 400%;
-      margin: 0% 40% 5% 40%;
-      width:  400px;
-      height: 400px;
-    }
-  </style>
+<style>
+button {
+  font-size: 400%;
+  margin: 0% 40% 5% 40%;
+  width:  400px;
+  height: 400px;
+}
+</style>
 </head>
 
 <body>
-  <button>red</button>
-  <button>green</button>
-  <button>blue</button>
-  <button>left</button>
-  <button>right</button>
-  <button>forward</button>
-  <button>back</button>
-
-  <button>wiggle</button>
-
+<div id="buttonHolder"></div>
 </body>
 
 <script>
-$(function() {
-  $("button").click( function(evt){
-      var cmd = $(evt.target).text();
-      baseUrl = "/api/robots/sphero/commands/"
+var App = {
+baseUrl: "/api/robots/sphero/commands/",
 
-    $.get(baseUrl + cmd);
-      });
-  });
+         botButtonClick: function(evt) {
+           var cmd = $(evt.target).text();
+
+           $.get(App.baseUrl + cmd);
+         },
+
+botButtonClick: function(evt) {
+                  var cmd = $(evt.target).text();
+
+                  $.get(App.baseUrl + cmd);
+                },
+
+makeButtonNamed: function(name) {
+                   $container = $("#buttonHolder");
+                   $("<button>" + name + "</button>")
+                     .appendTo($container)
+                     .click(this.botButtonClick);
+                 },
+
+loadCommands: function(data) {
+                commands = data.MCP.robots[0].commands;
+
+                $.each(commands, function(ix, el) {
+                    App.makeButtonNamed(el);
+                    });
+              },
+
+init: function() {
+        console.log("init!");
+        $.getJSON(App.baseUrl, App.loadCommands)
+      }
+};
+
+
+$(App.init);
 </script>
 
 </html>
