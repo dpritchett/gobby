@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,9 +14,18 @@ import (
 )
 
 func main() {
+	// pass a different bluetooth FD as needed: webby /dev/rfcomm1
+	deviceFd := "/dev/rfcomm0"
+
+	flag.Parse()
+	if flag.Arg(0) != "" {
+		log.Println(flag.Arg(0))
+		deviceFd = flag.Arg(0)
+	}
+
 	gbot := gobot.NewGobot()
 
-	adaptor := sphero.NewSpheroAdaptor("sphero", "/dev/rfcomm0")
+	adaptor := sphero.NewSpheroAdaptor("sphero", deviceFd)
 	driver := sphero.NewSpheroDriver(adaptor, "sphero")
 
 	spheroid := gobot.NewRobot("sphero",
@@ -57,7 +67,7 @@ func main() {
 	})
 
 	hello.AddCommand("back", func(params map[string]interface{}) interface{} {
-		driver.Roll(75, uint16(0))
+		driver.Roll(75, uint16(180))
 		return "moving back"
 	})
 
@@ -77,13 +87,8 @@ func main() {
 	hello.AddCommand("wiggle", func(params map[string]interface{}) interface{} {
 		wiggle()
 
-		gobot.After(2*time.Second, func() {
-			wiggle()
-		})
-
-		gobot.After(4*time.Second, func() {
-			wiggle()
-		})
+		gobot.After(2*time.Second, wiggle)
+		gobot.After(4*time.Second, wiggle)
 
 		return "wiggle wiggle wiggle wiggle wiggle wiggle wiggle"
 	})
